@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Home Assistant
+.HA_VERSION
+.cloud
+.storage
+deps/
+home-assistant_v2.db
+home-assistant.log
+
+# VS Code
+.vscode/
+
+# MacOS
+.DS_Store
