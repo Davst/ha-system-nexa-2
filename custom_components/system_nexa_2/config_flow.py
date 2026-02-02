@@ -153,6 +153,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             props = {k.decode(): v.decode() if isinstance(v, bytes) else v for k,v in service_info.properties.items()}
             model = props.get("model", "Nexa Device")
             
+            # Store ID for unique_id
+            if "id" in props:
+                self.context["unique_id"] = props["id"]
+            
             self.context["friendly_name"] = f"{s_name} ({model})"
             return await self.async_step_token_entry()
 
@@ -238,6 +242,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # We need to try to get the unique ID (Local ID) if we don't have it yet, 
                 # but we probably can't easily get it from the API without mDNS if the API doesn't expose it.
                 # But we have it from mDNS step previously theoretically.
+                unique_id = self.context.get("unique_id")
+                if unique_id:
+                    await self.async_set_unique_id(unique_id)
+                    self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
                 # For now let's create the entry.
                 return self.async_create_entry(
                     title=self.context.get("friendly_name") or f"Nexa 2 ({host})", 
@@ -284,6 +293,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await client.async_get_state()
                 # If successful, we create the entry immediately!
                 # Use name from context if available
+                # Also check unique_id if we have it from zeroconf step (we usually do context)
+                # But this is inside discovery_confirm, context might have it.
+                # Actually discovery_confirm is only called from zeroconf? 
+                # Yes, async_step_zeroconf sets unique_id already!
+                # So we don't need to set it again here manually for zeroconf flows.
+                # But just to be safe.
+                
                 props = self.context.get("title_placeholders", {})
                 name = f"{props.get('name', 'Nexa 2')} ({props.get('model', '')})" if 'name' in props else f"Nexa 2 ({host})"
                 
@@ -305,6 +321,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Failed to connect to System Nexa 2")
                 errors = {"base": "cannot_connect"}
              else:
+                # We need to try to get the unique ID (Local ID) if we don't have it yet, 
+                # but we probably can't easily get it from the API without mDNS if the API doesn't expose it.
+                # But we have it from mDNS step previously theoretically.
+                unique_id = self.context.get("unique_id")
+                if unique_id:
+                    await self.async_set_unique_id(unique_id)
+                    self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                    
                 return self.async_create_entry(
                     title=f"Nexa 2 ({host})", 
                     data={CONF_HOST: host, CONF_TOKEN: user_input.get(CONF_TOKEN, "")}

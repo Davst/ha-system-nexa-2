@@ -67,6 +67,35 @@ class SystemNexa2Client:
                 _LOGGER.error("Error setting state for System Nexa 2 device: %s", err)
                 raise
 
+    async def async_set_power(self, state: bool) -> dict:
+        """Turn the device on or off.
+        
+        Args:
+           state: True for on, False for off.
+        """
+        # If toggling on, it might restore last brightness
+        params = {"on": "1" if state else "0"}
+        
+        # We always use HTTP for power toggle to ensure "restore" behavior works as per docs (?on=1)
+        # WebSocket behavior for "value": "1" is implied to be full 100%, not restore.
+        
+        # Fallback to HTTP
+        url = f"{self._base_url}/state"
+        headers = {"Content-type": "application/json", "token": self._token}
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                # GET /state?on=1
+                async with session.get(url, params=params, headers=headers, timeout=10) as response:
+                    response.raise_for_status()
+                    return await response.json()
+            except asyncio.TimeoutError:
+                _LOGGER.error("Timeout setting power for System Nexa 2 device at %s", self._host)
+                raise
+            except aiohttp.ClientError as err:
+                _LOGGER.error("Error setting power for System Nexa 2 device: %s", err)
+                raise
+
     def set_callback(self, callback):
         """Set callback for state updates."""
         self._callback = callback

@@ -44,8 +44,15 @@ class SystemNexa2Light(LightEntity):
         self._client = client
         self._entry = entry
         self._attr_unique_id = entry.entry_id
+        
+        # Use existing unique_id (from mDNS) to identify device if possible
+        # This fixes duplicate devices in registry if re-added
+        identifiers = {(DOMAIN, entry.entry_id)}
+        if entry.unique_id:
+            identifiers.add((DOMAIN, entry.unique_id))
+            
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
+            identifiers=identifiers,
             name=entry.title,
             manufacturer="Nexa",
             model="System Nexa 2",
@@ -82,26 +89,24 @@ class SystemNexa2Light(LightEntity):
         if brightness is not None:
              # Scale 0-255 to 0.0-1.0
              value = brightness / 255.0
+             try:
+                await self._client.async_set_state(value)
+                self._handle_update(value)
+             except Exception as err:
+                _LOGGER.error("Failed to set brightness: %s", err)
         else:
-             value = 1.0 # Full brightness if just turned on
-             
-        try:
-            await self._client.async_set_state(value)
-            # State update will come via websocket callback usually, 
-            # but we can optimistically update if strictly needed.
-            # However, since we have the callback, let's rely on it or the return value.
-            # But the Client now returns optimistic dict if WS sent.
-            
-            # Since client.async_set_state returns the json response (or optimistic), 
-            # we can locally update too for responsiveness if WS laggy.
-            self._handle_update(value)
-        except Exception as err:
-            _LOGGER.error("Failed to turn on light: %s", err)
+             # No brightness -> Use power on (restore)
+             try:
+                 res = await self._client.async_set_power(True)
+                 if "state" in res:
+                      self._handle_update(float(res["state"]))
+             except Exception as err:
+                 _LOGGER.error("Failed to turn on light: %s", err)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         try:
-            await self._client.async_set_state(0)
+            await self._client.async_set_power(False)
             self._handle_update(0.0)
         except Exception as err:
             _LOGGER.error("Failed to turn off light: %s", err)
