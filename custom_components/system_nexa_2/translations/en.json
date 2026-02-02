@@ -46,7 +46,7 @@
                 "title": "Authentication Required",
                 "description": "Please enter the token for {host}",
                 "data": {
-                    "token": "Token"
+                    "token": "Token (Leave empty if not enabled)"
                 }
             }
         },

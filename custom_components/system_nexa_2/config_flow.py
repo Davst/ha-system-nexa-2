@@ -65,7 +65,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Task done
         self._discovery_task = None
-        return await self.async_step_pick_device()
+        return self.async_show_progress_done(next_step_id="pick_device")
 
     async def _async_run_active_discovery(self):
         """Run active discovery in background."""
@@ -133,8 +133,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                  return self.async_abort(reason="no_ip")
 
             self.context["host"] = host
+            self.context["host"] = host
             self.context["title_placeholders"] = {"name": user_input["device"]}
-            self.context["friendly_name"] = user_input["device"]
+            
+            # Extract friendly name (removing IP and parens if possible, but our label is "Name (Model) - IP")
+            # user_input["device"] is the label.
+            # We can just match it against our _discovered_devices logic to get the 'dev_name'
+            
+            # Reconstruct name from ServiceInfo properties to be cleaner
+            dev_name = "Nexa Device"
+            
+            # service_info.name is like "MyDevice._systemnexa2._tcp.local."
+            s_name = service_info.name.replace("._systemnexa2._tcp.local.", "")
+            if s_name.endswith(".local"):
+                 s_name = s_name[:-6]
+            if s_name.endswith("."):
+                 s_name = s_name[:-1]
+            
+            props = {k.decode(): v.decode() if isinstance(v, bytes) else v for k,v in service_info.properties.items()}
+            model = props.get("model", "Nexa Device")
+            
+            self.context["friendly_name"] = f"{s_name} ({model})"
             return await self.async_step_token_entry()
 
         # Gather devices
