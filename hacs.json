@@ -3,5 +3,11 @@
     "render_readme": true,
     "zip_release": true,
     "hide_default_branch": true,
-    "filename": "system_nexa_2.zip"
+    "filename": "system_nexa_2.zip",
+    "country": [
+        "NO",
+        "SE",
+        "DK",
+        "FI"
+    ]
 }
