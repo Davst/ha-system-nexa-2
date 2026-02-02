@@ -69,7 +69,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           draft: false
-          prerelease: true
+          prerelease: false
           files: system_nexa_2.zip
           body: |
             Automated Alpha Release ${{ steps.version.outputs.tag }}
