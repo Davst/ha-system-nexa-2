@@ -1,30 +1,10 @@
-# System Nexa 2 for Home Assistant
+# System Nexa 2 (Experimental)
 
-Custom component for System Nexa 2 support in Home Assistant.
+> [!WARNING]
+> **PROOF OF CONCEPT ONLY**
 
-## Features
-- **Local Control**: Control your devices via the local network (no cloud required).
-- **Websocket Support**: Real-time state updates (critical for devices like WPD-01 with physical buttons).
-- **Discovery**: Automatically discovers devices on your network.
-- **Dimmers**: Full support for dimming capabilities.
+This is an experimental early stage integration that aims to bring compatability with the Nexa System 2 into Home Assistant. 
 
-## Installation
+**Note that it is early stage and won't be working till the initial release.** 
 
-### HACS (Recommended)
-1. Add this repository as a **Custom Repository** in HACS.
-2. Search for "System Nexa 2" and click Download.
-3. Restart Home Assistant.
-
-### Manual
-1. Copy the `custom_components/system_nexa_2` folder to your Home Assistant `config/custom_components/` directory.
-2. Restart Home Assistant.
-
-## Configuration
-1. Go to **Settings** > **Devices & Services**.
-2. If your device is discovered, click **Configure**.
-3. Otherwise, click **Add Integration** and search for "System Nexa 2".
-4. Enter your **API Token**.
-
-## Supported Devices
-- Nexa WPD-01 (Dimmer)
-- Other System Nexa 2 receivers (Generic support)
+It should **not be used prior to version 1.0 is ready** as more than a proof of concept.
