@@ -45,12 +45,23 @@ jobs:
 
       - name: Update manifest version
         run: |
-          jq '.version = "${{ steps.version.outputs.version }}"' custom_components/system_nexa_2/manifest.json > temp.json && mv temp.json custom_components/system_nexa_2/manifest.json
+          # Debug: Show content before
+          cat custom_components/system_nexa_2/manifest.json
+          
+          # Update version using jq to a temp file, then overwrite
+          jq --arg ver "${{ steps.version.outputs.version }}" '.version = $ver' custom_components/system_nexa_2/manifest.json > manifest.tmp
+          mv manifest.tmp custom_components/system_nexa_2/manifest.json
+          
+          # Debug: Verify content after
+          cat custom_components/system_nexa_2/manifest.json
 
       - name: Create ZIP file
         run: |
           cd custom_components
           zip -r ../system_nexa_2.zip system_nexa_2
+          
+          # Debug: Verify zip content
+          unzip -l ../system_nexa_2.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
