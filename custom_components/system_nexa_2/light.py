@@ -91,10 +91,20 @@ class SystemNexa2Light(LightEntity):
              value = brightness / 255.0
              try:
                 await self._client.async_set_state(value)
+                # The API often returns stale state (e.g. 0.00) immediately after setting a value.
+                # We optimistically update to the requested value since the user confirmed `v` controls power.
                 self._handle_update(value)
              except Exception as err:
                 _LOGGER.error("Failed to set brightness: %s", err)
         else:
+             # No brightness -> Use power on (restore)
+             try:
+                 res = await self._client.async_set_power(True)
+                 # For toggle ON, we must rely on response because we don't know the restored level
+                 if "state" in res:
+                      self._handle_update(float(res["state"]))
+             except Exception as err:
+                 _LOGGER.error("Failed to turn on light: %s", err)
              # No brightness -> Use power on (restore)
              try:
                  res = await self._client.async_set_power(True)
