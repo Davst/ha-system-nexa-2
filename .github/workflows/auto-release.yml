@@ -57,11 +57,11 @@ jobs:
 
       - name: Create ZIP file
         run: |
-          cd custom_components
-          zip -r ../system_nexa_2.zip system_nexa_2
+          cd custom_components/system_nexa_2
+          zip -r ../../system_nexa_2.zip .
           
-          # Debug: Verify zip content
-          unzip -l ../system_nexa_2.zip
+          # Debug: Verify zip content (should be flat)
+          unzip -l ../../system_nexa_2.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
