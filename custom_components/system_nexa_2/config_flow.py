@@ -102,7 +102,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                  return await self.async_step_manual()
             
             # Selected a device
-            host = self._discovered_devices[user_input["device"]].host
+            service_info = self._discovered_devices[user_input["device"]]
+            # ServiceInfo doesn't have .host, use parsed_addresses()
+            host = service_info.parsed_addresses()[0] if service_info.parsed_addresses() else None
+            
+            # Fallback if no IP (shouldn't happen given logic below)
+            if not host:
+                 return self.async_abort(reason="no_ip")
+
             self.context["host"] = host
             self.context["title_placeholders"] = {"name": user_input["device"]}
             return await self.async_step_token_entry()
@@ -132,10 +139,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         if not options:
             errors["base"] = "no_devices_found"
+            # Only add Manual option if no devices found, or maybe always?
+            # User feedback: "makes no sense that it is here" if they already chose search.
+            # But if search failed, they need it.
+            options["manual"] = "Enter Manually"
 
         # Add options
-        options["refresh"] = "Refresh List"
-        options["manual"] = "Enter Manually"
+        options["refresh"] = "Search Again"
 
         return self.async_show_form(
             step_id="pick_device",
