@@ -1,0 +1,72 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Next Version
+        id: version
+        run: |
+          # Get the latest tag, default to v0.0.0 if none
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
+          
+          # If this is the very first run and no tags exist, we start at v0.0.1
+          if [ "$latest_tag" = "v0.0.1" ] && [ -z "$(git tag -l v0.0.1)" ]; then
+            new_version="0.0.1"
+          else
+            # Remove 'v' prefix
+            version_raw="${latest_tag#v}"
+            
+            # Split into parts
+            IFS='.' read -r major minor patch <<< "$version_raw"
+            
+            # Increment patch
+            new_patch=$((patch + 1))
+            new_version="$major.$minor.$new_patch"
+          fi
+          
+          echo "Next version: $new_version"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "tag=v$new_version" >> $GITHUB_OUTPUT
+
+      - name: Update manifest version
+        uses: restackio/update-json-file-action@v2.1
+        with:
+          file: custom_components/system_nexa_2/manifest.json
+          fields: |
+            {
+              "version": "${{ steps.version.outputs.version }}"
+            }
+
+      - name: Create ZIP file
+        run: |
+          cd custom_components
+          zip -r ../system_nexa_2.zip system_nexa_2
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: true
+          files: system_nexa_2.zip
+          body: |
+            Automated Alpha Release ${{ steps.version.outputs.tag }}
+            
+            **Changes in this release:**
+            ${{ github.event.head_commit.message }}
