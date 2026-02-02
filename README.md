@@ -1,3 +1,9 @@
+# System Nexa 2 (Early Alpha)
+
+> [!CAUTION]
+> **EXPERIMENTAL / DO NOT USE**
+> This integration is currently in early alpha and under active development. It is **not ready for public use**. Breaking changes may occur at any time.
+
 # System Nexa 2 for Home Assistant
 
 Custom component for System Nexa 2 support in Home Assistant.
