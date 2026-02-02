@@ -48,6 +48,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     results[name] = info
 
         try:
+            self.async_show_progress(
+                step_id="search",
+                progress_action="search"
+            )
+
             zc = await zeroconf.async_get_instance(self.hass)
             browser = ServiceBrowser(zc, "_systemnexa2._tcp.local.", handlers=[on_service_state_change])
             
@@ -59,6 +64,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
         except Exception as e:
             _LOGGER.warning("Error during active mDNS scan: %s", e)
+        finally:
+            self.async_show_progress_done(next_step_id="pick_device")
 
         # Update cache/discovered list with active findings
         # For simplicity, we just pass what we found to the cache (if we were using one)
@@ -69,7 +76,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices = {}
         for name, info in results.items():
             # Conversion logic similar to pick_device loop
+            # Conversion logic similar to pick_device loop
             dev_name = name.replace("._systemnexa2._tcp.local.", "")
+            if dev_name.endswith(".local"):
+                 dev_name = dev_name[:-6]
+            if dev_name.endswith("."):
+                 dev_name = dev_name[:-1]
             model = "Nexa Device"
             local_id = None
             

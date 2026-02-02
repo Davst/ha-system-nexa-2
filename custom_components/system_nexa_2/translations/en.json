@@ -1,5 +1,8 @@
 {
     "config": {
+        "progress": {
+            "search": "Please wait while we search for devices on your network..."
+        },
         "step": {
             "user": {
                 "title": "System Nexa 2 Setup",
@@ -29,12 +32,19 @@
                 "description": "Enter the IP address and token of your System Nexa 2 device.",
                 "data": {
                     "host": "IP Address",
-                    "token": "Token"
+                    "token": "Token (Leave empty if not enabled)"
                 }
             },
             "discovery_confirm": {
                 "title": "Discovered System Nexa 2",
                 "description": "Do you want to set up {name} ({model}) at {host}?",
+                "data": {
+                    "token": "Token (Leave empty if not enabled)"
+                }
+            },
+            "token_entry": {
+                "title": "Authentication Required",
+                "description": "Please enter the token for {host}",
                 "data": {
                     "token": "Token"
                 }
