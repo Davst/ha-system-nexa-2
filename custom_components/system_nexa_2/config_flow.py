@@ -37,36 +37,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_search(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Search for devices via mDNS."""
-        # Browse for devices
-        zc = await zeroconf.async_get_instance(self.hass)
-        discovered = await zc.async_get_service_info("_systemnexa2._tcp.local.")
-        
-        # NOTE: Since async_get_service_info only returns one if known, we might want to browse.
-        # However, HA doesn't give us a direct "browse" method on the shared instance easily 
-        # that returns a list instantly. 
-        # Standard pattern is using a listener or just waiting for discovery flows.
-        # But if we want to actively "Scan", we can try to look up known services in the internal cache
-        # or just rely on what HA has found so far if we can access it.
-        
-        # Actually, for an active scan in a config flow, we typically check what zeroconf has found.
-        # Since we can't easily force a new browse from here without a listener, 
-        # we will assume the User flow is triggered, and we will try to discover.
-        # A common pattern is to just list devices that have already been discovered by HA's zeroconf
-        # or start a discovery task.
-        
-        # Let's try to get all service infos from the zeroconf instance cache.
-        # The `zeroconf` object from `async_get_instance` is a standard python-zeroconf object.
-        pass # Placeholder for thought trace, implementing actual code below...
-
-        # Re-implementation:
-        # Since collecting *all* mDNS devices takes time, we'll try to get what's known.
-        # `async_get_instance` returns the `Zeroconf` object.
-        # cache = zc.cache
-        # But accessing cache directly is internal.
-        
-        # Alternative: The user asked for "refresh" list.
-        # We can implement a "pick_device" step that shows the list.
-        
+        # Browse for devices - technically we just check the cache in pick_device
         return await self.async_step_pick_device()
 
     async def async_step_pick_device(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -76,6 +47,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if user_input["device"] == "refresh":
                  return await self.async_step_pick_device()
+            if user_input["device"] == "manual":
+                 return await self.async_step_manual()
             
             # Selected a device
             host = self._discovered_devices[user_input["device"]].host
@@ -85,12 +58,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Gather devices
         # We rely on HA's zeroconf to have found things.
-        # Since we can't easily query the central registry for "all services of type X",
-        # We might have to rely on `zeroconf.async_get_instance(self.hass)` and look at the cache manually,
-        # OR we can just wait for `async_step_zeroconf` to be called.
-        
-        # However, the user wants a "search" button. 
-        # Let's try to inspect the cache for now as it's the most direct way if we don't want to spawn a listener.
         
         zc = await zeroconf.async_get_instance(self.hass)
         services = zc.get_service_info_list("_systemnexa2._tcp.local.")
@@ -134,13 +101,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not options:
             errors["base"] = "no_devices_found"
 
-        # Add refresh option
+        # Add options
         options["refresh"] = "Refresh List"
+        options["manual"] = "Enter Manually"
 
         return self.async_show_form(
             step_id="pick_device",
             data_schema=vol.Schema({
-                vol.Required("device", default=list(options.keys())[0] if options else "refresh"): vol.In(options)
+                vol.Required("device", default=list(options.keys())[0]): vol.In(options)
             }),
             errors=errors
         )
