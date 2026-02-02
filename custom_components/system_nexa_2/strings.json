@@ -1,0 +1,47 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "System Nexa 2 Setup",
+                "description": "Please ensure your System Nexa 2 device is set up in the Nexa App before proceeding.",
+                "data": {
+                    "host": "Host",
+                    "token": "Token"
+                },
+                "menu_options": {
+                    "search": "Search for devices",
+                    "manual": "Manual Configuration"
+                }
+            },
+            "pick_device": {
+                "title": "Select Device",
+                "description": "Select a device to configure. If your device is not listed, try refreshing.",
+                "data": {
+                    "device": "Device"
+                }
+            },
+            "manual": {
+                "title": "Manual Configuration",
+                "description": "Enter the IP address and token of your System Nexa 2 device.",
+                "data": {
+                    "host": "IP Address",
+                    "token": "Token"
+                }
+            },
+            "discovery_confirm": {
+                "title": "Discovered System Nexa 2",
+                "description": "Do you want to set up {name} ({model}) at {host}?",
+                "data": {
+                    "token": "Token"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "no_devices_found": "No devices found on the network"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    }
+}
