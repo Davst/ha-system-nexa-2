@@ -1,14 +1,19 @@
 {
   "domain": "system_nexa_2",
   "name": "System Nexa 2",
-  "codeowners": [],
+  "codeowners": [
+    "@Davst"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://docs.systemnexa2.se/",
   "issue_tracker": "https://github.com/david/ha-system-nexa-2/issues",
   "iot_class": "local_polling",
+  "loggers": [
+    "custom_components.system_nexa_2"
+  ],
   "requirements": [],
-  "version": "1.0.0",
+  "version": "0.0.1",
   "zeroconf": [
     "_systemnexa2._tcp.local."
   ]
