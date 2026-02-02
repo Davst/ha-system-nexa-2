@@ -18,6 +18,7 @@ class SystemNexa2Client:
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._callback = None
         self._session: aiohttp.ClientSession | None = None
+        self._listening = False
 
     async def async_get_state(self) -> dict:
         """Get the current state of the device."""
@@ -97,8 +98,9 @@ class SystemNexa2Client:
     async def connect_and_listen(self):
         """Connect to Websocket and listen for updates."""
         self._session = aiohttp.ClientSession()
+        self._listening = True
         
-        while True:
+        while self._listening:
             try:
                 _LOGGER.debug("Connecting to System Nexa 2 Websocket at %s", self._ws_url)
                 async with self._session.ws_connect(self._ws_url) as ws:
@@ -109,10 +111,13 @@ class SystemNexa2Client:
                     await ws.send_json({"type": "login", "value": self._token or ""})
                     
                     async for msg in ws:
+                        if not self._listening:
+                             break
+                             
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             try:
                                 data = msg.json()
-                                _LOGGER.debug("Received Websocket message: %s", data)
+                                # _LOGGER.debug("Received Websocket message: %s", data)
                                 
                                 # Docs: {"type":"state", "value":"0.5"}
                                 if data.get("type") == "state" and self._callback:
@@ -127,13 +132,16 @@ class SystemNexa2Client:
                             _LOGGER.error("Websocket connection error")
                             break
             except Exception as err:
-                _LOGGER.error("Websocket error: %s. Reconnecting in 5s...", err)
+                if self._listening:
+                    _LOGGER.error("Websocket error: %s. Reconnecting in 5s...", err)
             
             self._ws = None
-            await asyncio.sleep(5) # Reconnect delay
+            if self._listening:
+                await asyncio.sleep(5) # Reconnect delay
 
     async def close(self):
         """Close the connection."""
+        self._listening = False
         if self._ws:
             await self._ws.close()
         if self._session:
