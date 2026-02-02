@@ -59,8 +59,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Gather devices
         # We rely on HA's zeroconf to have found things.
         
-        zc = await zeroconf.async_get_instance(self.hass)
-        services = zc.get_service_info_list("_systemnexa2._tcp.local.")
+        # HaZeroconf doesn't support get_service_info_list directly.
+        # We rely on the async_step_zeroconf to trigger flows automatically.
+        # This step essentially just checks if we have any "pending" discoveries if we could, 
+        # but since we can't easily query the cache, we'll just show the manual option.
+        services = []
         
         self._discovered_devices = {}
         options = {}
