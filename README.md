@@ -1,14 +1,13 @@
-# System Nexa 2 (Experimental)
+# System Nexa 2 integration for Home Assistant
+ 
+This integration brings compatibility with the **System Nexa 2** into Home Assistant. 
 
-> [!WARNING]
-> **PROOF OF CONCEPT ONLY**
+**Released!** Setup instructions and features below.
 
-This is an experimental early stage integration that aims to bring compatability with the Nexa System 2 into Home Assistant. 
-
-**Note that it is early stage and won't be working till the initial release.** 
-
-It should **not be used prior to version 1.0 is ready** as more than a proof of concept.
-
+> [!NOTE]
+> This integration is **Free to Use** and ready for testing!
+> The **WPD-01 (Dimmer)** is fully supported and verified.
+ 
 This project aims to be able to discover and control devices you configured in the Nexa app, bringing them into Home Assistant as working smart devices.
 
 ## Features
