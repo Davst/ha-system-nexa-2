@@ -41,15 +41,9 @@ class SystemNexa2Client:
         
         Value should be 0 (off), 1 (on), or float 0.0-1.0 (dimmer).
         """
-        # If we have an active websocket, use it
-        if self._ws is not None and not self._ws.closed:
-             try:
-                 await self._ws.send_json({"type": "state", "value": str(value)})
-                 return {"state": value} # Optimistic return, real state comes via callback
-             except Exception as err:
-                 _LOGGER.warning("Failed to send state via websocket, falling back to HTTP: %s", err)
+        # We use HTTP primarily for control to ensure we get the immediate response state
+        # and to simplify handling of "turn on if off" logic.
         
-        # Fallback to HTTP
         url = f"{self._base_url}/state"
         params = {"v": str(value)}
         headers = {"Content-type": "application/json", "token": self._token}
