@@ -37,7 +37,58 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_search(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Search for devices via mDNS."""
-        # Browse for devices - technically we just check the cache in pick_device
+        from zeroconf import ServiceBrowser, ServiceStateChange
+
+        results = {}
+
+        def on_service_state_change(zeroconf, service_type, name, state_change):
+            if state_change is ServiceStateChange.Added:
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    results[name] = info
+
+        try:
+            zc = await zeroconf.async_get_instance(self.hass)
+            browser = ServiceBrowser(zc, "_systemnexa2._tcp.local.", handlers=[on_service_state_change])
+            
+            # Wait a few seconds for discovery
+            import asyncio
+            await asyncio.sleep(3)
+            
+            browser.cancel()
+            
+        except Exception as e:
+            _LOGGER.warning("Error during active mDNS scan: %s", e)
+
+        # Update cache/discovered list with active findings
+        # For simplicity, we just pass what we found to the cache (if we were using one)
+        # or merge it with pick_device logic.
+        # But wait, pick_device uses `self._discovered_devices`.
+        # We should pre-populate it here.
+        
+        self._discovered_devices = {}
+        for name, info in results.items():
+            # Conversion logic similar to pick_device loop
+            dev_name = name.replace("._systemnexa2._tcp.local.", "")
+            model = "Nexa Device"
+            local_id = None
+            
+            props = {k.decode(): v.decode() if isinstance(v, bytes) else v for k,v in info.properties.items()}
+            if "model" in props: 
+                model = props["model"]
+            
+            # Use IP
+            host = info.parsed_addresses()[0] if info.parsed_addresses() else None
+            
+            if host:
+                label = f"{dev_name} ({model}) - {host}"
+                self._discovered_devices[label] = info
+
+        # Now pass to pick_device. 
+        # But pick_device re-scans using cache. 
+        # We should modify pick_device to accept pre-filled devices or use self._discovered_devices.
+        # Let's verify pick_device logic.
+        
         return await self.async_step_pick_device()
 
     async def async_step_pick_device(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -65,42 +116,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # but since we can't easily query the cache, we'll just show the manual option.
         services = []
         
-        self._discovered_devices = {}
-        options = {}
+        # If we came from search, we might already have devices
+        if not self._discovered_devices:
+             self._discovered_devices = {}
         
-        for service in services:
-             # Extract name, etc.
-             # service.properties matches the byte strings
-             name = service.name.replace("._systemnexa2._tcp.local.", "")
-             model = "Nexa Device" # Default
-             local_id = None
-             
-             # Decode properties
-             props = {k.decode(): v.decode() if isinstance(v, bytes) else v for k,v in service.properties.items()}
-             if "model" in props:
-                 model = props["model"]
-             if "id" in props:
-                 local_id = props["id"]
+        # If we found nothing new via cache logic (which is empty now), we rely on what we have.
+        
+        options = {}
+        for label, service in self._discovered_devices.items():
+             options[label] = label
 
-             # Add to list
-             # We use the IP as the key or the name. 
-             # service.parsed_addresses() gives IP.
-             host = service.parsed_addresses()[0] if service.parsed_addresses() else None
-             
-             if host:
-                 label = f"{name} ({model}) - {host}"
-                 self._discovered_devices[label] = service
-                 
-                 # Update validation: Check if configured
-                 # We can check unique ID if we have the local_id
-                 if local_id:
-                     # Check if entry exists? 
-                     # self._abort_if_unique_id_configured is usually for the *current* flow's context.
-                     # We can manually check `self.hass.config_entries.async_entries(DOMAIN)`
-                     pass
-
-                 options[label] = label
-
+        # Legacy active-scan-in-pick-device logic was here, but we moved it to async_step_search
+        # and we cleared the list here previously. 
+        # Now we just list what's in self._discovered_devices.
+        
         if not options:
             errors["base"] = "no_devices_found"
 
