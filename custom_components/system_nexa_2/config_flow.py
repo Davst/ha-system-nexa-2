@@ -149,7 +149,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle manual entry."""
         errors: dict[str, str] = {}
         if user_input is not None:
-             client = SystemNexa2Client(user_input[CONF_HOST], user_input[CONF_TOKEN])
+             client = SystemNexa2Client(user_input[CONF_HOST], user_input.get(CONF_TOKEN, ""))
              try:
                 await client.async_get_state()
              except Exception:
@@ -194,7 +194,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         
         return self.async_show_form(
              step_id="token_entry",
-             data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
+             data_schema=vol.Schema({vol.Optional(CONF_TOKEN, default=""): str}),
              errors=errors,
              description_placeholders={"host": host}
         )
@@ -221,28 +221,42 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_discovery_confirm(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle user confirmation of discovery."""
+        host = self.context.get("host")
+        
+        # If this is the first time we enter this step (user_input is None),
+        # try to connect with an empty token immediately (Auto-Connect).
+        if user_input is None:
+            # Attempt auto-connect with empty token
+            client = SystemNexa2Client(host, "")
+            try:
+                await client.async_get_state()
+                # If successful, we create the entry immediately!
+                return self.async_create_entry(
+                   title=f"Nexa 2 ({host})", 
+                   data={CONF_HOST: host, CONF_TOKEN: ""}
+                )
+            except Exception:
+                # If failed (e.g. 401 Auth Required), we fall through to showing the form.
+                # We log this as debug so we know why we are showing form.
+                _LOGGER.debug("Auto-connect with empty token failed, prompting user for token")
+
+        errors: dict[str, str] = {}
         if user_input is not None:
-             host = self.context.get("host")
-             client = SystemNexa2Client(host, user_input[CONF_TOKEN])
+             client = SystemNexa2Client(host, user_input.get(CONF_TOKEN, ""))
              try:
                 await client.async_get_state()
              except Exception:
                 _LOGGER.exception("Failed to connect to System Nexa 2")
                 errors = {"base": "cannot_connect"}
-                return self.async_show_form(
-                    step_id="discovery_confirm",
-                    data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
-                    errors=errors,
-                    description_placeholders=self.context.get("title_placeholders")
-                )
              else:
                 return self.async_create_entry(
                     title=f"Nexa 2 ({host})", 
-                    data={CONF_HOST: host, CONF_TOKEN: user_input[CONF_TOKEN]}
+                    data={CONF_HOST: host, CONF_TOKEN: user_input.get(CONF_TOKEN, "")}
                 )
 
         return self.async_show_form(
             step_id="discovery_confirm", 
-            data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
-            description_placeholders=self.context.get("title_placeholders")
+            data_schema=vol.Schema({vol.Optional(CONF_TOKEN): str}),
+            description_placeholders=self.context.get("title_placeholders"),
+            errors=errors
         )
