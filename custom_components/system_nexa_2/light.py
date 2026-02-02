@@ -36,6 +36,8 @@ class SystemNexa2Light(LightEntity):
 
     _attr_has_entity_name = True
     _attr_name = None  # Use device name
+    
+    # Default to Dimmer capabilities
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
     _attr_color_mode = ColorMode.BRIGHTNESS
 
@@ -44,6 +46,15 @@ class SystemNexa2Light(LightEntity):
         self._client = client
         self._entry = entry
         self._attr_unique_id = entry.entry_id
+        
+        # Check model for capabilities
+        # WPD-01, WBD-01 = Dimmer
+        # WPR-01, WPO-01, WBR-01 = Switch (On/Off only)
+        model = entry.data.get("model", "Nexa Device")
+        if model in ["WPR-01", "WPO-01", "WBR-01"]:
+             self._attr_supported_color_modes = {ColorMode.ONOFF}
+             self._attr_color_mode = ColorMode.ONOFF
+
         
         # Use existing unique_id (from mDNS) to identify device if possible
         # This fixes duplicate devices in registry if re-added

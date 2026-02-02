@@ -13,7 +13,7 @@
     "custom_components.system_nexa_2"
   ],
   "requirements": [],
-  "version": "0.1.0",
+  "version": "0.1.1",
   "zeroconf": [
     "_systemnexa2._tcp.local."
   ]

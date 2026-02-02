@@ -248,9 +248,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
                 # For now let's create the entry.
+                # data needs model if we have it? 
+                # In pick_device we parsed it but didn't put in context explicitly other than friendly_name parsing
+                # But we can extract it again or rely on default.
+                
+                friendly_name = self.context.get("friendly_name", "")
+                model = "Nexa Device"
+                if "(" in friendly_name and ")" in friendly_name:
+                     try:
+                        model = friendly_name.split("(")[1].split(")")[0]
+                     except IndexError:
+                        pass
+
                 return self.async_create_entry(
-                    title=self.context.get("friendly_name") or f"Nexa 2 ({host})", 
-                    data={CONF_HOST: host, CONF_TOKEN: user_input[CONF_TOKEN]}
+                    title=friendly_name or f"Nexa 2 ({host})", 
+                    data={CONF_HOST: host, CONF_TOKEN: user_input[CONF_TOKEN], "model": model}
                 )
         
         return self.async_show_form(
@@ -301,11 +313,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # But just to be safe.
                 
                 props = self.context.get("title_placeholders", {})
-                name = f"{props.get('name', 'Nexa 2')} ({props.get('model', '')})" if 'name' in props else f"Nexa 2 ({host})"
+                model = props.get('model', 'Nexa Device')
+                name = f"{props.get('name', 'Nexa 2')} ({model})" if 'name' in props else f"Nexa 2 ({host})"
                 
                 return self.async_create_entry(
                    title=name,
-                   data={CONF_HOST: host, CONF_TOKEN: ""}
+                   data={CONF_HOST: host, CONF_TOKEN: "", "model": model}
                 )
             except Exception:
                 # If failed (e.g. 401 Auth Required), we fall through to showing the form.

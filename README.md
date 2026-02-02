@@ -43,5 +43,14 @@ Before configuring this integration in Home Assistant, your Nexa device must be 
 4. Enter your **API Token**.
 
 ## Supported Devices
-- Nexa WPD-01 (Dimmer)
+
+### Fully Verified
+- **Nexa WPD-01** (Dimmer) - *Verified v0.1.0+*
+
+### Preliminary Support (Untested)
+The following devices should work based on API compatibility but haven't been verified by users yet:
+- **Nexa WPR-01** (Smart Plug Switch)
+- **Nexa WPO-01** (Outdoor Smart Plug Switch)
+- **Nexa WBR-01** (Built-in Switch)
+- **Nexa WBD-01** (Built-in Dimmer)
 - Other System Nexa 2 receivers (Generic support)
