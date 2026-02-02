@@ -18,42 +18,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Calculate Next Version
+      - name: Get Version from Manifest
         id: version
         run: |
-          # Get the latest tag, default to v0.0.0 if none
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
+          # Read version from manifest.json
+          version=$(jq -r .version custom_components/system_nexa_2/manifest.json)
+          echo "Detected version from manifest: $version"
           
-          # If this is the very first run and no tags exist, we start at v0.0.1
-          if [ "$latest_tag" = "v0.0.1" ] && [ -z "$(git tag -l v0.0.1)" ]; then
-            new_version="0.0.1"
-          else
-            # Remove 'v' prefix
-            version_raw="${latest_tag#v}"
-            
-            # Split into parts
-            IFS='.' read -r major minor patch <<< "$version_raw"
-            
-            # Increment patch
-            new_patch=$((patch + 1))
-            new_version="$major.$minor.$new_patch"
+          # Check if tag already exists to prevent duplicate release failure
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+             echo "Tag v$version already exists. Assuming re-run or patch."
+             # Optional: fail or just continue? 
+             # For now, let's just proceed, gh-release might warn but that's ok.
           fi
           
-          echo "Next version: $new_version"
-          echo "version=$new_version" >> $GITHUB_OUTPUT
-          echo "tag=v$new_version" >> $GITHUB_OUTPUT
-
-      - name: Update manifest version
-        run: |
-          # Debug: Show content before
-          cat custom_components/system_nexa_2/manifest.json
-          
-          # Update version using jq to a temp file, then overwrite
-          jq --arg ver "${{ steps.version.outputs.version }}" '.version = $ver' custom_components/system_nexa_2/manifest.json > manifest.tmp
-          mv manifest.tmp custom_components/system_nexa_2/manifest.json
-          
-          # Debug: Verify content after
-          cat custom_components/system_nexa_2/manifest.json
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "tag=v$version" >> $GITHUB_OUTPUT
 
       - name: Create ZIP file
         run: |
