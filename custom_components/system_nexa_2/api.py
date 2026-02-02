@@ -83,7 +83,7 @@ class SystemNexa2Client:
                     
                     # Authenticate/Login (value empty as per docs if no elevated security, but required)
                     # Docs: {"type":"login", "value":""}
-                    await ws.send_json({"type": "login", "value": ""})
+                    await ws.send_json({"type": "login", "value": self._token or ""})
                     
                     async for msg in ws:
                         if msg.type == aiohttp.WSMsgType.TEXT:
