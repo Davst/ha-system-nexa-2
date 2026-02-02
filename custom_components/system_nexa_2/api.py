@@ -45,8 +45,11 @@ class SystemNexa2Client:
         # We use HTTP primarily for control to ensure we get the immediate response state
         # and to simplify handling of "turn on if off" logic.
         
+        # Format to 2 decimal places as device rejects long floats
+        val_str = "{:.2f}".format(value)
+        
         url = f"{self._base_url}/state"
-        params = {"v": str(value)}
+        params = {"v": val_str}
         headers = {"Content-type": "application/json", "token": self._token}
 
         async with aiohttp.ClientSession() as session:
