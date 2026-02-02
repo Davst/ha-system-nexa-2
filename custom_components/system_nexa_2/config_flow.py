@@ -25,6 +25,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self):
         """Initialize the config flow."""
         self._discovered_devices = {}
+        self._discovery_task = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -47,35 +48,50 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if info:
                     results[name] = info
 
-        try:
-            self.async_show_progress(
+        if self._discovery_task and not self._discovery_task.done():
+             return self.async_show_progress(
                 step_id="search",
-                progress_action="search"
-            )
+                progress_action="search",
+                progress_task=self._discovery_task
+             )
 
+        if not self._discovery_task:
+             self._discovery_task = self.hass.async_create_task(self._async_run_active_discovery())
+             return self.async_show_progress(
+                step_id="search",
+                progress_action="search",
+                progress_task=self._discovery_task
+             )
+
+        # Task done
+        self._discovery_task = None
+        return await self.async_step_pick_device()
+
+    async def _async_run_active_discovery(self):
+        """Run active discovery in background."""
+        from zeroconf import ServiceBrowser, ServiceStateChange
+
+        results = {}
+
+        def on_service_state_change(zeroconf, service_type, name, state_change):
+            if state_change is ServiceStateChange.Added:
+                info = zeroconf.get_service_info(service_type, name)
+                if info:
+                    results[name] = info
+
+        try:
             zc = await zeroconf.async_get_instance(self.hass)
             browser = ServiceBrowser(zc, "_systemnexa2._tcp.local.", handlers=[on_service_state_change])
             
-            # Wait a few seconds for discovery
             import asyncio
             await asyncio.sleep(3)
-            
             browser.cancel()
-            
         except Exception as e:
             _LOGGER.warning("Error during active mDNS scan: %s", e)
-        finally:
-            self.async_show_progress_done(next_step_id="pick_device")
-
-        # Update cache/discovered list with active findings
-        # For simplicity, we just pass what we found to the cache (if we were using one)
-        # or merge it with pick_device logic.
-        # But wait, pick_device uses `self._discovered_devices`.
-        # We should pre-populate it here.
         
+        # Populate results
         self._discovered_devices = {}
         for name, info in results.items():
-            # Conversion logic similar to pick_device loop
             # Conversion logic similar to pick_device loop
             dev_name = name.replace("._systemnexa2._tcp.local.", "")
             if dev_name.endswith(".local"):
@@ -83,7 +99,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if dev_name.endswith("."):
                  dev_name = dev_name[:-1]
             model = "Nexa Device"
-            local_id = None
             
             props = {k.decode(): v.decode() if isinstance(v, bytes) else v for k,v in info.properties.items()}
             if "model" in props: 
@@ -96,12 +111,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 label = f"{dev_name} ({model}) - {host}"
                 self._discovered_devices[label] = info
 
-        # Now pass to pick_device. 
-        # But pick_device re-scans using cache. 
-        # We should modify pick_device to accept pre-filled devices or use self._discovered_devices.
-        # Let's verify pick_device logic.
-        
-        return await self.async_step_pick_device()
+
 
     async def async_step_pick_device(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Allow the user to pick a device."""
@@ -124,6 +134,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             self.context["host"] = host
             self.context["title_placeholders"] = {"name": user_input["device"]}
+            self.context["friendly_name"] = user_input["device"]
             return await self.async_step_token_entry()
 
         # Gather devices
@@ -210,7 +221,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # But we have it from mDNS step previously theoretically.
                 # For now let's create the entry.
                 return self.async_create_entry(
-                    title=f"Nexa 2 ({host})", 
+                    title=self.context.get("friendly_name") or f"Nexa 2 ({host})", 
                     data={CONF_HOST: host, CONF_TOKEN: user_input[CONF_TOKEN]}
                 )
         
@@ -253,8 +264,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 await client.async_get_state()
                 # If successful, we create the entry immediately!
+                # Use name from context if available
+                props = self.context.get("title_placeholders", {})
+                name = f"{props.get('name', 'Nexa 2')} ({props.get('model', '')})" if 'name' in props else f"Nexa 2 ({host})"
+                
                 return self.async_create_entry(
-                   title=f"Nexa 2 ({host})", 
+                   title=name,
                    data={CONF_HOST: host, CONF_TOKEN: ""}
                 )
             except Exception:
